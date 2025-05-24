@@ -1,0 +1,189 @@
+:root {
+    --primary-color: #002B5A;
+    --text-color1: #F7F9FA;
+    --text-color2: #1B191B;
+    --bg-color: #D9D9D9;
+    
+    }
+*{
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+body{
+    background: linear-gradient(110deg, #09214C -8.77%, #154DB2 135.01%), #FFF;
+    color: #154DB2;
+    height: 100vh;
+}
+.registration-container{
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center; /* horizontal */
+    align-items: center; /* vertical */
+    
+    }
+.registration-wrapper{
+    width: 692px;
+    min-height: 789px;
+    flex-shrink: 0;
+    background: var(--primary-color);
+    border-radius: 24px;
+    box-shadow: 0px 0px 40px 4px rgba(0, 0, 0, 0.30);
+    transition: min-height 0.3s ease;
+    padding-bottom: 20px;
+}
+.header-container{
+    width: 100%;
+}
+.main-header{
+    padding-top: 69.6px;
+    text-align: center;
+    color: var( --text-color1);
+    color: #F7F9FA;
+    font-size: 38.4px;
+    font-style: normal;
+    font-weight: 600;
+    line-height: 58px;
+}
+
+.registration-form {
+    width: 445.6px; 
+    min-height: 590.4px; 
+    flex-shrink: 0; 
+    border-radius: 16px; 
+    background: var(--bg-color);
+    margin: 30.8px auto 0;
+    transition: min-height 0.3s ease;
+    padding-bottom: 20px;
+}
+
+.registration-form-title{
+    color: var(--text-color2);
+    font-family: Poppins; 
+    font-size: 28.8px; 
+    font-style: normal; 
+    font-weight: 500; 
+    line-height: 55px; 
+    text-align: center; 
+    padding-top: 25.6px;
+}
+.input-group-flex{
+    display: flex;
+    align-items: center; /* horizontal */ 
+    flex-direction: column;
+}
+
+.input-group {
+    position: relative;
+    margin: 14.6px;
+}
+
+.input-wrapper {
+    position: relative;
+}
+
+.error{
+    display: none;
+    width: 368.8px; 
+    margin-top: 5px;
+}
+
+.error p{
+    font-size: 14px;
+    color: #ff4444;
+    margin-left: 5px;
+}
+
+.error.show {
+    display: block;
+}
+
+.input-group label{
+    position: absolute;
+    top: 50%; left: 7.6px;
+    transform: translateY(-50%);
+    color: #242424; 
+    font-size: 19.2px; 
+    font-style: normal; 
+    font-weight: 400;
+    line-height: normal;
+    padding: 0 7.6px; 
+    pointer-events: none;
+    transition: 0.3s;
+}
+.input-group input{
+    width: 368.8px; height: 47.2px;
+    background: transparent;
+    border: 1.6px rgba(0, 0, 0, 0.35) solid; 
+    border-radius: 8px; 
+    text-decoration: none; 
+    font-size: 18px;
+    padding: 0 15.2px;
+    Outline: none;
+    color: rgb(34, 34, 34);
+}
+.input-wrapper input:focus~ label,
+.input-wrapper input:valid~label {
+    top: 0; 
+    font-size: 14px;
+    padding: 0 8px;
+    background: var(--bg-color);
+    left: 10.2px;
+}
+
+.submit-button-container{
+    display: flex;
+    justify-content: center;   
+    margin-top: 8.6px;
+}
+
+.submit-button-container input{
+    color: #1B191B; 
+    font-family: Poppins; 
+    font-size: 19.2px; 
+    font-style: normal; 
+    font-weight: 500; 
+    line-height: 29px; 
+    padding: 9.9px 152.9px;
+    border-radius: 8px; border: none;
+    background: #FDC211;
+    cursor: pointer;    
+    transition: .3s;
+    margin-bottom: 13.2px
+}
+.submit-button-container input:hover{
+    scale: 1.02;
+    box-shadow: 0px 3.2px 3.2px 0px rgba(0, 0, 0, 0.25);
+}
+.registration-form h6{
+    color: #1B191B;
+    font-size: 16px;
+    font-style: normal;
+    font-weight: 500;
+    text-align: center;
+    
+}
+.registration-form a{
+    font-weight: 600;
+    text-decoration: none;
+    animation: .3;
+}
+.registration-form a:hover{
+    text-decoration: underline;
+}
+
+#togglePassword,
+#togglePassword2 {
+    position: absolute; 
+    right: 15px; 
+    top: 50%; 
+    transform: translateY(-50%); 
+    border: none; 
+    background: none; 
+    cursor: pointer;
+    font-size: 20px;
+    color: var(--text-color2);
+    opacity: .8;
+}

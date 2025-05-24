@@ -1,0 +1,31 @@
+.modal .error {
+    display: none;
+    color: #ff3333;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    text-align: left;
+    width: 100%;
+}
+
+.modal .error.show {
+    display: block;
+}
+
+.modal .input-cont {
+    position: relative;
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+
+.modal .input-cont input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid rgba(0, 0, 0, 0.35);
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.modal .input-cont input:focus {
+    outline: none;
+    border-color: #154DB2;
+} 
