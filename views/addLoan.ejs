@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Management System - Add Loan</title>
+    <link rel="stylesheet" href="/css/addLoan.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="content-container">
+        <div class="header-container">
+            <h1>Add Loan</h1>
+        </div>
+        <div class="upper-text">
+            <button class="back-btn" onclick="window.history.back()" id="backButton">
+                <i class="fa-solid fa-arrow-left"></i>
+                Back
+            </button>
+            <h2>Enter Loan Details</h2>
+        </div>
+        <div class="form-container">
+            <form action="/addLoan" method="POST" enctype="multipart/form-data" class="form-wrapper">
+                <div class="form-holder left">
+                    <div class="input-group">
+                        <input type="text" id="borrower" name="borrower" placeholder="Search" required>
+                        <label for="borrower">Select Borrower</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="loanAmount" name="loanAmount" required step="0.01" min="0">
+                        <label for="loanAmount">Loan Amount</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="loanTerm" name="loanTerm" placeholder="optional" min="1">
+                        <label for="loanTerm">Loan Term (Months)</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="interestRate" name="interestRate" required step="0.01" min="0" max="100">
+                        <label for="interestRate">Interest Rate (% per month)</label>
+                    </div>
+                </div>
+
+                <div class="form-holder right">
+                    <div class="input-group">
+                        <input type="date" id="startDate" name="startDate">
+                        <label for="startDate">Start Date</label>
+                    </div>
+                    <div class="input-group">
+                        <select id="paymentFrequency" name="paymentFrequency" required>
+                            <option value="Fortnightly">Fortnightly</option>
+                            <option value="Monthly" selected>Monthly</option>
+                            <option value="Quarterly">Quarterly</option>
+                            <option value="Semi-annually">Semi-annually</option>
+                            <option value="Annually">Annually</option>
+                        </select>
+                        <label for="paymentFrequency">Payment Frequency</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="file" id="loanAgreement" name="loanAgreement" accept="image/*" required>
+                        <label for="loanAgreement">Loan Agreement Document</label>
+                    </div>
+                    <button type="submit" class="submit-btn">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script>
+        const userId = '<%= userId %>'; // This will be populated by EJS
+    </script>
+    <script src="/js/addLoan.js"></script>
+    <script src="https://kit.fontawesome.com/cf0fa1fa7a.js" crossorigin="anonymous"></script>
+</body>
+</html> 

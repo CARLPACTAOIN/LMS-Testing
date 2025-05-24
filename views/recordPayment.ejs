@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Management System - Record Payment</title>
+    <link rel="stylesheet" href="/css/recordPayment.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="content-container">
+        <div class="header-container">
+            <h1>Record Payment</h1>
+        </div>
+        <div class="upper-text">
+            <button class="back-btn" onclick="window.history.back()" id="backButton">
+                <i class="fa-solid fa-arrow-left"></i>
+                Back
+            </button>
+            <h2>Enter Payment Details</h2>
+        </div>
+        <div class="form-container">
+            <form class="form-wrapper" id="recordPaymentForm" enctype="multipart/form-data">
+                <div class="form-holder left">
+                    <div class="input-group">
+                        <input type="text" id="borrower" name="borrower" placeholder="Search" autocomplete="off" required>
+                        <label for="borrower">Select Borrower</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="loan" name="loan" placeholder="Search" autocomplete="off" required>
+                        <label for="loan">Select Loan</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="date" id="paymentDate" name="paymentDate" required>
+                        <label for="paymentDate">Payment Date</label>
+                    </div>
+                    <div class="input-group">
+                        <select id="paymentMethod" name="paymentMethod" required>
+                            <option value="Gcash">Gcash</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Bank">Bank</option>
+                        </select>
+                        <label for="paymentMethod">Payment Method</label>
+                    </div>
+                </div>
+                <div class="form-holder middle">
+                    <div class="input-group">
+                        <input type="number" id="principalPaid" name="principalPaid" step="0.01" min="0" required>
+                        <label for="principalPaid">Principal Amount Paid</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="interestPaid" name="interestPaid" step="0.01" min="0" required>
+                        <label for="interestPaid">Interest Amount Paid</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="delay" name="delay" readonly>
+                        <label for="delay">Delay (in days)</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="lateFee" name="lateFee" step="0.01" readonly>
+                        <label for="lateFee">Late Payment Fee</label>
+                    </div>
+                </div>
+                <div class="form-holder right">
+                    <div class="input-group">
+                        <textarea id="notes" name="notes"></textarea>
+                        <label for="notes">Notes (Optional)</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="file" id="receipt" name="receipt" accept="image/*">
+                        <label for="receipt">Upload Receipt (Optional)</label>
+                    </div>
+                    <button type="button" class="submit-btn" id="doneBtn">Done</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Payment Summary Modal -->
+    <div class="modal-bg" id="paymentSummaryModal">
+        <div class="modal-flex">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h2>Payment Summary</h2>
+                    <span class="close-modal" id="closeSummaryModal">&times;</span>
+                </div>
+                <div class="viewWrapper">
+                    <div class="viewMode">
+                        <div class="left-content">
+                            <table class="modal-table left" id="summaryContent1">
+                                <!-- Populated by JS -->
+                            </table>
+                        </div>
+                        <div class="right-content">
+                            <table class="modal-table right" id="summaryContent2">
+                                <!-- Populated by JS -->
+                            </table>
+                            <div id="receiptPhotoModal" class="photo-modal">
+                                <div class="photo-modal-content">
+                                    <span class="close-photo">&times;</span>
+                                    <img id="receiptPhotoDisplay">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="text-align:center; margin: 20px 0 10px 0;">
+                    <button class="submit-btn" id="savePaymentBtn">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Success Modal -->
+    <div class="success-modal" id="successModal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-blue"></div>
+            <i class="fa-regular fa-circle-check"></i>
+            <p>Payment recorded successfully!</p>
+        </div>
+    </div>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:2000; justify-content:center; align-items:center;">
+        <div style="background:#fff; padding:40px 60px; border-radius:12px; box-shadow:0 0 20px #0002; display:flex; flex-direction:column; align-items:center;">
+            <div class="loader" style="border:8px solid #f3f3f3; border-top:8px solid #154DB2; border-radius:50%; width:60px; height:60px; animation:spin 1s linear infinite;"></div>
+            <p style="margin-top:20px; font-size:20px; color:#154DB2;">Processing Payment...</p>
+        </div>
+    </div>
+    <style>
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+    <script>
+        window.userId = '<%= userId %>';
+    </script>
+    <script src="/js/recordPayment.js"></script>
+    <script src="https://kit.fontawesome.com/cf0fa1fa7a.js" crossorigin="anonymous"></script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Management Sysyem - Login</title>
+    <link rel="stylesheet" href="/css/addBorrower.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="content-container">
+        <div class="header-container">
+            <h1>Add Borrower</h1>
+        </div>
+        <div class="upper-text">
+          
+                <button class="back-btn" onclick="window.history.back()" id="backButton">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Back
+                </button>
+            
+            <h2>Enter Data</h2>
+        </div>
+        <div class="form-container">
+
+            <form action="" class="form-wrapper">
+
+                <div class="form-holder left">
+                    <div class="input-group">
+                        <input type="text" id="firstname" name="firstname" required >
+                        <label for="firstname">First Name</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="lastname" name="lastname" required >
+                        <label for="lastname">Last Name</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="middlename" name="middlename" placeholder="optional" >
+                        <label for="middlename">Middle Name</label>
+                    </div>
+                    <div class="input-group">
+                        <select id="gender" name="gender" required >
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="other">Other</option>
+                        </select>
+                        <label for="middlename">Gender</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="email" name="email" required >
+                        <label for="email">Email Address/FB</label>
+                    </div>
+                </div>
+
+                <div class="form-holder middle">
+                    <div class="input-group">
+                        <input type="date" id="birthdate" name="birthdate" required >
+                        <label for="birthdate">Birthdate</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="tel" id="contact" name="contact" required >
+                        <label for="contact">Contact Number</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="tel" id="gcash" name="gcash" placeholder="optional" >
+                        <label for="gcash">Gcash Number</label>
+                    </div>
+                    <div class="input-group">
+                        <textarea id="address" name="address" placeholder="St., Barangay, Municipality, Province" required ></textarea>
+                        <label for="address">Home Address</label>
+                    </div>
+                </div>
+                <div class="form-holder right">
+                    <div class="input-group">
+                        <select id="idType" name="idType" required >
+                            <option value="">Choose</option>
+                            <option value="passport">Passport</option>
+                            <option value="nationalId">National ID</option>
+                            <option value="driverlicense">Driver's License</option>
+                            <option value="votersId">Voter's ID</option>
+                            <option value="schoolId">School ID</option>
+                        </select>
+                        <label for="idType">ID Type</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="file" id="photoId" name="photoId" required >
+                        <label for="photoId">Photo ID</label>
+                    </div>
+                    <button class="submit-btn">
+                        Save
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <script src="/js/addBorrower.js"></script>
+    <script src="https://kit.fontawesome.com/cf0fa1fa7a.js" crossorigin="anonymous"></script>
+</body>

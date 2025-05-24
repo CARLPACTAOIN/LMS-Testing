@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Management Sysyem - Payments</title>
+    <link rel="stylesheet" href="/css/payments.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="content-container">
+        <div class="header-container">
+            <h1>Payment History</h1>
+        </div>
+        <div class="menu-container">
+            <div class="hamburger-menu">
+                <i class="fa-solid fa-bars"></i>
+            </div>
+            <div class="dropdown-menu">
+                <a href="https://www.facebook.com/cjcarl.pactaoin" class="dropdown-item" id="contactUs" target="_blank">
+                    <i class="fa-solid fa-envelope"></i>
+                    Contact Us
+                </a>
+                <a href="#" class="dropdown-item" id="logoutOption">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    Logout
+                </a>
+            </div>
+        </div>
+        <div class="upper-text">
+            <a href="/dashboard">
+                <button class="back-btn" id="backButton">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Back
+                </button>
+            </a>
+            <div class="filter-container">
+                <label for="filter-field" class="filter lab">Filter</label>
+                <select name="filter-field" id="filter-field" class="filter drop">
+                    <option value="borrower">Borrower</option>
+                    <option value="loanId">Loan ID</option>
+                    <option value="paymentDate">Payment Date</option>
+                    <option value="paymentMethod">Payment Method</option>
+                </select>
+                <input type="text" placeholder="Search" class="filter" id="search-input"> 
+                <a href="/record-payment">
+                    <button class="payment-btn" id="add-payment-btn">
+                        <i class="fa-solid fa-plus"></i>
+                        Record Payment
+                    </button>
+                </a>
+            </div>
+        </div>
+        <div class="payment-table-container">
+            <table class="payment-table">
+                <thead>
+                    <tr>
+                        <th>Payment Date</th> 
+                        <th>Borrower</th>
+                        <th>Loan ID</th>
+                        <th>Principal</th>
+                        <th>Interest</th>
+                        <th>Fee</th>
+                        <th>Total</th>
+                        <th id="action-field">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="payment-tbody">
+                    <!-- Dynamic rows go here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="modal-bg" id="paymentModal">
+        <div class="modal-flex" id="modal-flex">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h2>Payment Details </h2>
+                    <span class="close-modal">&times;</span>
+                </div>
+                
+                <div class="viewWrapper">
+                    <div class="viewMode">
+                        <div class="left-content">
+                            <table class="modal-table left" id="modalContent1">
+                                <!-- Will be populated by JavaScript -->
+                            </table>
+                        </div>
+                        <div class="right-content">
+                            <table class="modal-table right" id="modalContent2">
+                                <!-- Will be populated by JavaScript -->
+                            </table>
+                            <div id="receiptPhotoModal" class="photo-modal">
+                                <div class="photo-modal-content">
+                                    <span class="close-photo">&times;</span>
+                                    <img id="receiptPhotoDisplay">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/js/payments.js"></script>
+    <script src="https://kit.fontawesome.com/cf0fa1fa7a.js" crossorigin="anonymous"></script>
+     <script>
+        const userId = '<%= userId %>'; // for ejs
+    </script> 
+
+    <!-- Logout Confirmation Modal -->
+    <div class="remove-bg" id="logoutModal">
+        <div class="remove-flex">
+            <div class="remove-container">
+                <div class="remove-header">
+                    <p>Logout Confirmation</p>
+                </div>
+                <form class="remove-form">
+                    <label>Are you sure you want to logout?</label>
+                    <div class="remove-btn-cont">
+                        <button type="button" id="logoutCancel" class="removeBtn cancel">Cancel</button>
+                        <input type="submit" class="removeBtn confirm" value="Confirm">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>

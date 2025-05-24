@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Management Sysyem - Login</title>
+    <link rel="stylesheet" href="/css/borrowers.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="content-container">
+        <div class="header-container">
+            <h1>Borrowers List</h1>
+        </div>
+        <div class="menu-container">
+            <div class="hamburger-menu">
+                <i class="fa-solid fa-bars"></i>
+            </div>
+            <div class="dropdown-menu">
+                <a href="https://www.facebook.com/cjcarl.pactaoin" class="dropdown-item" id="contactUs" target="_blank">
+                    <i class="fa-solid fa-envelope"></i>
+                    Contact Us
+                </a>
+                <a href="#" class="dropdown-item" id="logoutOption">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    Logout
+                </a>
+            </div>
+        </div>
+        <div class="upper-text">
+            <a href="/dashboard">
+                <button class="back-btn" id="backButton">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Back
+                </button>
+            </a>
+            <div class="filter-container">
+                <label for="filter-field" class="filter lab">Filter</label>
+                <select name="filter-field" id="filter-field" class="filter drop">
+                    <option value="borrower">Name</option>
+                    <option value="email">Email</option>
+                    <option value="email">Facebook</option>
+                    <option value="contact">Contact</option>
+                    <option value="gender">Gender</option>
+                    <option value="status">Status</option>
+                </select>
+                <input type="text" placeholder="Search" class="filter" id="search-input">
+                <a href="/add-borrower">
+                    <button class="borrower-btn" id="add-brw-btn">
+                        <i class="fa-solid fa-plus"></i>
+                        Add New Borrower
+                    </button>
+                </a>
+            </div>
+            
+        </div>
+        <div class="borrower-table-container">
+            <table class="borrower-table">
+            <thead>
+                <tr>
+                <th>Name</th>
+                <th>Contact</th>
+                <th>Email/FB</th>
+                <th id="status">Status</th>
+                <th id="action">Action</th>
+                </tr>
+            </thead>
+            <tbody id="borrower-tbody">
+                <!-- Dynamic rows go here -->
+            </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="modal-bg" id="borrowerModal">
+        <div class="modal-flex" id="modal-flex">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h2>Borrowers Details</h2>
+                    <span class="close-modal">&times;</span>
+                </div>
+
+                <div class="viewWrapper">
+                    <div class="viewMode">
+                        <div class="left-content">
+                            <table class="modal-table left" id="modalContent1">
+                                
+                            </table>
+                        </div>
+                        <div class="right-content">
+                            <table class="modal-table right"  id="modalContent2">
+                                
+                            </table>
+                            <div id="idPhotoModal" class="photo-modal">
+                                <div class="photo-modal-content">
+                                <span class="close-photo">&times;</span>
+                                <img id="idPhotoDisplay">
+                                </div>
+                            </div>
+                            <div class="buttons-container">
+                                <button id="editBtn">Edit</button>
+                                <button id="addLoan">
+                                    <i class="fa-solid fa-plus"></i>
+                                    Add New Loan
+                                </button>   
+                            </div>
+                        </div>
+                    </div>
+                </div>  
+
+                <div class="editWrapper">
+                    <div id="editMode" class="edit-mode">
+                        <div class="edit-left">
+                            <table class="edit-table right"  id="editContent1">
+                                <tr><td>First Name</td><td>: <input type="text" id="firstNameEdit" name="firstName" value="Juan"></td></tr>
+                                <tr><td>Last Name</td><td>: <input type="text" id="lastNameEdit" name="lastName" value="Dela Cruz"></td></tr>
+                                <tr><td>Email/Facebook</td><td>: <input type="text" id="emailEdit" name="email" value="bakalnakrus@gmail.com"></td></tr>
+                                <tr><td>Contact Number</td><td>: <input type="tel" id="contactEdit" name="contact" value="09773146853"></td></tr>
+                                <tr><td>Gender</td><td>: 
+                                  <select id="genderEdit" name="gender">
+                                    <option value="Male" selected>Male</option>
+                                    <option value="Female">Female</option>
+                                  </select>
+                                </td></tr>
+                                <tr><td>Birthdate</td><td>: <input type="date" id="birthdateEdit" name="birthdate" value="1992-02-14"></td></tr>
+                                <tr><td>Address</td><td>: <textarea id="addressEdit" name="address">Sinamar II, Poblacion, Kabacan, North Cotabato</textarea></td></tr>
+                            </table>
+                        </div>
+                        <div class="edit-right">
+                            <table class="edit-table right"  id="editContent2">
+                                <tr><td>Gcash Number</td><td>: <input type="tel" id="gcashEdit" name="gcash" value="Juan"></td></tr>
+                                <tr><td>Total Active Loans </td><td>: <input type="text" id="activeLoansEdit" value="Dela Cruz" readonly></td></tr>
+                                <tr><td>Total Amount Borrowed</td><td>: <input type="text" id="amountBorrowedEdit" value="bakalnakrus@gmail.com" readonly></td></tr>
+                                <tr><td>Total Paid</td><td>: <input type="text" id="totalPaidEdit" value="09773146853" readonly></td></tr>
+                                <tr><td>Remaining Balance</td><td>: <input type="text" id="balanceEdit" value="09773146853" readonly></td></tr>
+                                <tr>
+                                    <td>Photo ID</td>
+                                    <td>: <span id="currentFileName">${borrower.photoId}</span>
+
+                                        <!-- Hidden file input (for new upload) -->
+                                        <input type="file" id="fileUpload" name="photoId" style="display: none;">
+
+                                        <!-- Button to trigger file selection -->
+                                         <br>
+                                        <button type="button" onclick="document.getElementById('fileUpload').click()">
+                                        Change
+                                        </button>
+                                    </td>
+                                </tr>
+                            </table>
+                            <div class="buttons-container">
+                                <button id="cancelBtn">Cancel</button>
+                                <input type="submit" value="Save" id="saveBtn">   
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <!-- Remove borrower confirmation -->
+    <div class="remove-bg">
+        <div class="remove-flex">
+            <div class="remove-container">
+                <div class="remove-header">
+                    <p>Confirmation</p>
+                </div>
+                <form class="remove-form">
+                    <label for="removePass">Enter password to remove this borrower!</label>
+                    <div class="input-cont">
+                        <input type="password" id="removePass" required>
+                        <button type="button" id="togglePassword"> 
+                                <i class="fa-solid fa-eye-slash" id="toggleIcon"></i>
+                        </button>
+                    </div>
+                    <div class="error" id="removeError">
+                        <p>Invalid password</p>
+                    </div>
+                    <div class="remove-btn-cont">
+                        <button id="removeCancel" class="removeBtn cancel">Cancel</button>
+                        <input type="submit" class="removeBtn confirm" value="Confirm">
+                    </div>
+            
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="/js/borrowers.js"></script>
+    <script>
+        const userId = '<%= userId %>'; // for ejs
+    </script> 
+    <script src="https://kit.fontawesome.com/cf0fa1fa7a.js" crossorigin="anonymous"></script>
+
+    <!-- Logout Confirmation Modal -->
+    <div class="remove-bg" id="logoutModal">
+        <div class="remove-flex">
+            <div class="remove-container">
+                <div class="remove-header">
+                    <p>Logout Confirmation</p>
+                </div>
+                <form class="remove-form">
+                    <label>Are you sure you want to logout?</label>
+                    <div class="remove-btn-cont">
+                        <button type="button" id="logoutCancel" class="removeBtn cancel">Cancel</button>
+                        <input type="submit" class="removeBtn confirm" value="Confirm">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>

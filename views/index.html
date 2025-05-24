@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Management Sysyem - Login</title>
+    <link rel="stylesheet" href="/css/login.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-wrapper">
+            <div class="header-container">
+                <h1 class="main-header">
+                    Loan Management System
+                </h1>
+            </div>
+            <form class="login-form">
+                <h3 class="login-form-title">
+                    Login to your account
+                </h3>
+                <div class="input-group-flex">
+                    <div class="input-group">
+                        <div class="input-wrapper">
+                            <input type="text" id="email" name="email" required>
+                            <label for="email">Email</label>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <div class="input-wrapper">
+                            <input type="password" id="password" name="password" required>
+                            <label for="password">Password</label>
+                            <button type="button" id="togglePassword"> 
+                                <i class="fa-solid fa-eye-slash" id="toggleIcon"></i>
+                            </button>
+                        </div>
+                        <div class="error" id="loginError">
+                            <p>Invalid email or password</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="submit-button-container">
+                    <input type="submit" value="LOG IN">
+                </div>
+                <a href="/register">CREATE ACCOUNT</a>
+            </form>
+           
+        </div>
+    </div>
+
+    <script src="/js/login.js"></script>
+    <script src="https://kit.fontawesome.com/cf0fa1fa7a.js" crossorigin="anonymous"></script>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); z-index:2000; justify-content:center; align-items:center;">
+        <div style="background:#fff; padding:40px 60px; border-radius:12px; box-shadow:0 0 20px #0002; display:flex; flex-direction:column; align-items:center;">
+            <div class="loader" style="border:8px solid #f3f3f3; border-top:8px solid #154DB2; border-radius:50%; width:60px; height:60px; animation:spin 1s linear infinite;"></div>
+            <p style="margin-top:20px; font-size:20px; color:#154DB2;">Logging in...</p>
+        </div>
+    </div>
+    <style>
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+    </style>
+</body>
+</html>

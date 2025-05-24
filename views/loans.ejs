@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Management Sysyem - Loans</title>
+    <link rel="stylesheet" href="/css/loans.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="content-container">
+        <div class="header-container">
+            <h1>Loans List</h1>
+        </div>
+        <div class="menu-container">
+            <div class="hamburger-menu">
+                <i class="fa-solid fa-bars"></i>
+            </div>
+            <div class="dropdown-menu">
+                <a href="https://www.facebook.com/cjcarl.pactaoin" class="dropdown-item" id="contactUs" target="_blank">
+                    <i class="fa-solid fa-envelope"></i>
+                    Contact Us
+                </a>
+                <a href="#" class="dropdown-item" id="logoutOption">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    Logout
+                </a>
+            </div>
+        </div>
+        <div class="upper-text">
+            <a href="/dashboard">
+                <button class="back-btn" id="backButton">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    Back
+                </button>
+            </a>
+            <div class="filter-container">
+                <label for="filter-field" class="filter lab">Filter</label>
+                <select name="filter-field" id="filter-field" class="filter drop">
+                    <option value="borrower">Borrower</option>
+                    <option value="interestRate">Interest Rate</option>
+                    <option value="dateBorrowed">Date Borrowed</option>
+                    <option value="status">Status</option>
+                </select>
+                <input type="text" placeholder="Search" class="filter" id="search-input">
+                <a href="/add-loan">
+                    <button class="loan-btn" id="add-loan-btn">
+                        <i class="fa-solid fa-plus"></i>
+                        Add New Loan
+                    </button>
+                </a>
+            </div>
+            
+        </div>
+        <div class="loan-table-container">
+            <table class="loan-table">
+            <thead>
+                <tr>
+                <th>Loan ID</th>
+                <th>Borrower</th>
+                <th>Amount</th>
+                <th>Date Borrowed</th>
+                <th>Interest</th>
+                <th>Status</th>
+                <th>Balance</th>
+                <th id="action">Action</th>
+                </tr>
+            </thead>
+            <tbody id="loan-tbody">
+                <!-- Dynamic rows go here -->
+            </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="modal-bg" id="loanModal">
+        <div class="modal-flex" id="modal-flex">
+            <div class="modal-container">
+                <div class="modal-header">
+                    <h2>Loan Details  <span id="modalLoanId">Loan ID: </span></h2>
+                    <div class="modal-actions" style="display:inline-block; vertical-align:middle; margin-left:20px;"></div>
+                    <span class="close-modal">&times;</span>
+                </div>
+
+                <div class="viewWrapper">
+                    <div class="viewMode">
+                        <div class="left-content">
+                            <table class="modal-table left" id="modalContent1">
+                                <!-- Will be populated by JavaScript -->
+                            </table>
+                        </div>
+                        <div class="right-content">
+                            <table class="modal-table right"  id="modalContent2">
+                                <!-- Will be populated by JavaScript -->
+                            </table>
+                            <div id="agreementPhotoModal" class="photo-modal">
+                                <div class="photo-modal-content">
+                                    <span class="close-photo">&times;</span>
+                                    <img id="agreementPhotoDisplay">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>  
+
+            </div>
+        </div>
+    </div>
+    <!-- Remove borrower confirmation -->
+    <div class="cancel-bg">
+        <div class="cancel-flex">
+            <div class="cancel-container">
+                <div class="cancel-header">
+                    <p>Confirmation</p>
+                </div>
+                <form class="cancel-form">
+                    <label for="removePass">Enter password to cancel this loan!</label>
+                    <div class="input-cont">
+                        <input type="password" id="removePass" required>
+                        <button type="button" id="togglePassword"> 
+                                <i class="fa-solid fa-eye-slash" id="toggleIcon"></i>
+                        </button>
+                    </div>
+                    <div class="error" id="cancelError">
+                        <p>Invalid password</p>
+                    </div>
+                    <div class="cancel-btn-cont">
+                        <button id="cancelCancel" class="cancelBtn cancel">Cancel</button>
+                        <input type="submit" class="cancelBtn confirm" value="Confirm">
+                    </div>
+            
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="/js/loans.js"></script>
+    <script>
+        const userId = '<%= userId %>'; // for ejs
+    </script> 
+    <script src="https://kit.fontawesome.com/cf0fa1fa7a.js" crossorigin="anonymous"></script>
+
+    <!-- Logout Confirmation Modal -->
+    <div class="remove-bg" id="logoutModal">
+        <div class="remove-flex">
+            <div class="remove-container">
+                <div class="remove-header">
+                    <p>Logout Confirmation</p>
+                </div>
+                <form class="remove-form">
+                    <label>Are you sure you want to logout?</label>
+                    <div class="remove-btn-cont">
+                        <button type="button" id="logoutCancel" class="removeBtn cancel">Cancel</button>
+                        <input type="submit" class="removeBtn confirm" value="Confirm">
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>

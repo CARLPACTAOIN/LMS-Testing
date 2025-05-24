@@ -1,0 +1,65 @@
+CREATE TABLE users (
+    user_id INT PRIMARY KEY IDENTITY(1,1),
+    first_name NVARCHAR(50),
+    last_name NVARCHAR(50),
+    email NVARCHAR(100) UNIQUE,
+    password NVARCHAR(255),
+    created_at DATETIME DEFAULT GETDATE()
+);
+
+CREATE TABLE borrowers (
+    borrower_id NVARCHAR(10) PRIMARY KEY, -- e.g., BR-120
+    user_id INT FOREIGN KEY REFERENCES users(user_id),
+    first_name NVARCHAR(50),
+    last_name NVARCHAR(50),
+    middle_name NVARCHAR(50),
+    contact_number NVARCHAR(20),
+    email NVARCHAR(100),
+    gender NVARCHAR(10) CHECK (gender IN ('Male', 'Female', 'Other')),
+    birthdate DATE,
+    address TEXT,
+	status NVARCHAR(20) CHECK (
+        status IN ('Active', 'Inactive')
+    ),
+    gcash_number NVARCHAR(20),
+    photo_id NVARCHAR(255), -- path to uploaded image file
+    created_at DATETIME DEFAULT GETDATE()
+);
+
+CREATE TABLE loans (
+    loan_id NVARCHAR(10) PRIMARY KEY,
+    borrower_id NVARCHAR(10) FOREIGN KEY REFERENCES borrowers(borrower_id),
+    user_id INT FOREIGN KEY REFERENCES users(user_id),
+    amount DECIMAL(12,2),
+    interest_rate DECIMAL(5,2),
+    term_months NVARCHAR(20),
+    date_borrowed DATE DEFAULT GETDATE(),
+    due_day INT CHECK (due_day BETWEEN 1 AND 31),
+	next_due_date DATE,
+    payment_frequency NVARCHAR(20) CHECK (
+        payment_frequency IN ('Fortnightly', 'Monthly', 'Quarterly', 'Semi-annually', 'Annually')
+    ),
+    status NVARCHAR(20) CHECK (
+        status IN ('Ongoing', 'Paid', 'Overdue', 'Cancelled')
+    ),
+	agreement_photo TEXT,
+    created_at DATETIME DEFAULT GETDATE()
+);
+
+
+CREATE TABLE payments (
+    payment_id INT PRIMARY KEY IDENTITY(1,1),
+    borrower_id NVARCHAR(10) FOREIGN KEY REFERENCES borrowers(borrower_id),
+    loan_id NVARCHAR(10) FOREIGN KEY REFERENCES loans(loan_id),
+    user_id INT FOREIGN KEY REFERENCES users(user_id),
+    payment_date DATE DEFAULT GETDATE(),
+    payment_method NVARCHAR(50),
+    principal_paid DECIMAL(12,2),
+    interest_paid DECIMAL(12,2),
+    delay_days INT,
+    late_payment_fee DECIMAL(12,2),
+    total_payment DECIMAL(12,2),
+    receipt TEXT, -- file path
+    notes NVARCHAR(255),
+    created_at DATETIME DEFAULT GETDATE()
+);
