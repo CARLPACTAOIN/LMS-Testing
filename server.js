@@ -475,7 +475,7 @@ app.post('/addBorrower', upload.single('photoId'), async (req, res) => {
 
 app.get('/api/borrowers/:userId', async (req, res) => {
     const userId = parseInt(req.params.userId);
-    const { filter, search } = req.query; // Add query parameters
+    const { filter, search } = req.query;
 
     console.log("Received userId:", userId);
     
@@ -498,11 +498,13 @@ app.get('/api/borrowers/:userId', async (req, res) => {
             l.next_due_date,
             l.payment_frequency,
             l.status,
+            l.remaining_principal,
+            l.remaining_interest,
             ISNULL(SUM(p.principal_paid), 0) as total_principal_paid,
             ISNULL(SUM(p.interest_paid), 0) as total_interest_paid
         FROM loans l
         LEFT JOIN payments p ON l.loan_id = p.loan_id
-        GROUP BY l.loan_id, l.borrower_id, l.user_id, l.amount, l.interest_rate, l.next_due_date, l.payment_frequency, l.status
+        GROUP BY l.loan_id, l.borrower_id, l.user_id, l.amount, l.interest_rate, l.next_due_date, l.payment_frequency, l.status, l.remaining_principal, l.remaining_interest
     ),
     LoanCalculations AS (
         SELECT 
@@ -512,26 +514,7 @@ app.get('/api/borrowers/:userId', async (req, res) => {
             SUM(amount) as total_amount_borrowed,
             SUM(CASE 
                 WHEN status NOT IN ('Paid', 'Cancelled') THEN 
-                    -- Initial balance (loan amount + first period interest)
-                    amount + 
-                    -- First period interest based on payment frequency
-                    CASE payment_frequency
-                        WHEN 'Weekly' THEN (amount * interest_rate/100) / 4
-                        WHEN 'Fortnightly' THEN (amount * interest_rate/100) / 2
-                        WHEN 'Monthly' THEN (amount * interest_rate/100)
-                        WHEN 'Quarterly' THEN (amount * interest_rate/100) * 3
-                        WHEN 'Semi-annually' THEN (amount * interest_rate/100) * 6
-                        WHEN 'Annually' THEN (amount * interest_rate/100) * 12
-                    END +
-                    -- Overdue fees if applicable
-                    CASE 
-                        WHEN next_due_date < GETDATE() THEN
-                            -- Daily penalty rate (0.1% per day) × days overdue × loan amount
-                            (0.001 * DATEDIFF(day, next_due_date, GETDATE()) * amount)
-                        ELSE 0 
-                    END -
-                    -- Subtract total payments
-                    (total_principal_paid + total_interest_paid)
+                    remaining_principal + remaining_interest
                 ELSE 0 
             END) as remaining_balance
         FROM LoanPayments
@@ -663,7 +646,6 @@ app.post('/delete-borrower', async (req, res) => {
     }
 });
 
-
 // Update Borrower
 app.post('/update-borrower', upload.single('photoId'), async (req, res) => {
     try {
@@ -775,123 +757,33 @@ app.get('/api/loans/:userId', async (req, res) => {
         const pool = await connectToDB();
 
         let query = `
-            WITH PaymentSummary AS (
-                SELECT 
-                    p.loan_id,
-                    p.payment_id,
-                    FORMAT(p.payment_date, 'MMM dd, yyyy') AS payment_date,
-                    p.principal_paid,
-                    p.interest_paid,
-                    p.total_payment
-                FROM payments p
-            ),
-            LoanCalculations AS (
-                SELECT 
-                    l.loan_id,
-                    l.amount,
-                    l.interest_rate,
-                    l.payment_frequency,
-                    l.next_due_date,
-                    CASE 
-                        WHEN l.next_due_date < GETDATE() THEN
-                            -- Base interest (adjusted for frequency) plus overdue fees
-                            CASE l.payment_frequency
-                                WHEN 'Weekly' THEN (l.amount * l.interest_rate/100) / 4 -- Weekly base (1/4 of monthly)
-                                WHEN 'Fortnightly' THEN (l.amount * l.interest_rate/100) / 2 -- Fortnightly base (1/2 of monthly)
-                                WHEN 'Monthly' THEN (l.amount * l.interest_rate/100) -- Full monthly base
-                                WHEN 'Quarterly' THEN (l.amount * l.interest_rate/100) * 3 -- Quarterly base (3x monthly)
-                                WHEN 'Semi-annually' THEN (l.amount * l.interest_rate/100) * 6 -- Semi-annual base (6x monthly)
-                                WHEN 'Annually' THEN (l.amount * l.interest_rate/100) * 12 -- Annual base (12x monthly)
-                            END +
-                            -- Plus overdue fees
-                            CASE l.payment_frequency
-                                WHEN 'Weekly' THEN (l.amount * l.interest_rate/100) / 7 * DATEDIFF(day, l.next_due_date, GETDATE())
-                                WHEN 'Fortnightly' THEN (l.amount * l.interest_rate/100) / 15 * DATEDIFF(day, l.next_due_date, GETDATE())
-                                WHEN 'Monthly' THEN (l.amount * l.interest_rate/100) / 30 * DATEDIFF(day, l.next_due_date, GETDATE())
-                                WHEN 'Quarterly' THEN (l.amount * l.interest_rate/100) / 90 * DATEDIFF(day, l.next_due_date, GETDATE())
-                                WHEN 'Semi-annually' THEN (l.amount * l.interest_rate/100) / 180 * DATEDIFF(day, l.next_due_date, GETDATE())
-                                WHEN 'Annually' THEN (l.amount * l.interest_rate/100) / 365 * DATEDIFF(day, l.next_due_date, GETDATE())
-                            END
-                        ELSE
-                            -- Just the regular period interest if not overdue
-                            CASE l.payment_frequency
-                                WHEN 'Weekly' THEN (l.amount * l.interest_rate/100) / 4 -- Weekly base (1/4 of monthly)
-                                WHEN 'Fortnightly' THEN (l.amount * l.interest_rate/100) / 2 -- Fortnightly base (1/2 of monthly)
-                                WHEN 'Monthly' THEN (l.amount * l.interest_rate/100) -- Full monthly base
-                                WHEN 'Quarterly' THEN (l.amount * l.interest_rate/100) * 3 -- Quarterly base (3x monthly)
-                                WHEN 'Semi-annually' THEN (l.amount * l.interest_rate/100) * 6 -- Semi-annual base (6x monthly)
-                                WHEN 'Annually' THEN (l.amount * l.interest_rate/100) * 12 -- Annual base (12x monthly)
-                            END
-                    END as calculated_interest
-                FROM loans l
-            ),
-            LoanStatus AS (
-                SELECT 
-                    l.loan_id,
-                    l.status,
-                    l.next_due_date,
-                    l.amount,
-                    lc.calculated_interest,
-                    (
-                        SELECT ISNULL(SUM(total_payment), 0)
-                        FROM payments
-                        WHERE loan_id = l.loan_id
-                    ) as total_paid,
-                    CASE
-                        WHEN l.status = 'Cancelled' THEN 'Cancelled'
-                        WHEN l.amount + lc.calculated_interest <= (
-                            SELECT ISNULL(SUM(total_payment), 0)
-                            FROM payments
-                            WHERE loan_id = l.loan_id
-                        ) THEN 'Paid'
-                        WHEN l.next_due_date < GETDATE() THEN 'Overdue'
-                        ELSE 'Ongoing'
-                    END as new_status
-                FROM loans l
-                INNER JOIN LoanCalculations lc ON l.loan_id = lc.loan_id
-            )
             SELECT 
-                l.loan_id AS loanId,
-                l.borrower_id AS borrowerId,
+                l.loan_id,
+                b.borrower_id,
                 b.first_name + ' ' + b.last_name AS borrower,
                 l.amount,
-                FORMAT(l.date_borrowed, 'MMM dd, yyyy') AS dateBorrowed,
-                CAST(l.interest_rate AS VARCHAR) + '%' AS interest,
-                ls.new_status as status,
-                l.term_months AS term,
-                l.payment_frequency AS paymentFrequency,
-                FORMAT(l.next_due_date, 'MMM dd, yyyy') AS nextDueDate,
-                lc.calculated_interest,
-                l.agreement_photo AS agreementPhoto,
-                ls.total_paid as total_payments,
-                (
-                    SELECT STRING_AGG(
-                        CONCAT(
-                            payment_id, '|',
-                            payment_date, '|',
-                            CAST(principal_paid AS VARCHAR), '|',
-                            CAST(interest_paid AS VARCHAR), '|',
-                            CAST(total_payment AS VARCHAR)
-                        ),
-                        ';'
-                    )
-                    FROM PaymentSummary
-                    WHERE loan_id = l.loan_id
-                ) as payment_details
-            FROM 
-                loans l
-                INNER JOIN borrowers b ON l.borrower_id = b.borrower_id
-                INNER JOIN LoanCalculations lc ON l.loan_id = lc.loan_id
-                INNER JOIN LoanStatus ls ON l.loan_id = ls.loan_id
-            WHERE 
-                l.user_id = @userId
+                l.interest_rate as interest,
+                l.term_months as term,
+                l.payment_frequency,
+                FORMAT(l.next_due_date, 'MMM dd, yyyy') as nextDueDate,
+                FORMAT(l.date_borrowed, 'MMM dd, yyyy') as date_borrowed,
+                l.status,
+                ISNULL(l.remaining_principal, l.amount) as remaining_principal,
+                ISNULL(l.remaining_interest, 0) as remaining_interest,
+                l.agreement_photo,
+                b.contact_number as phone,
+                b.email,
+                b.address
+            FROM loans l
+            JOIN borrowers b ON l.borrower_id = b.borrower_id
+            WHERE l.user_id = @userId
         `;
 
         // Add filtering logic
         if (filter && search) {
             switch(filter) {
                 case 'borrower':
-                    query += ` AND b.first_name + ' ' + b.last_name LIKE '%${search.replace(/'/g, "''")}%'`;
+                    query += ` AND (b.first_name + ' ' + b.last_name) LIKE '%${search.replace(/'/g, "''")}%'`;
                     break;
                 case 'interestRate':
                     query += ` AND l.interest_rate = ${parseFloat(search)}`;
@@ -900,21 +792,19 @@ app.get('/api/loans/:userId', async (req, res) => {
                     query += ` AND CONVERT(DATE, l.date_borrowed) = CONVERT(DATE, '${search}')`;
                     break;
                 case 'balance>':
-                    query += ` AND (l.amount + lc.calculated_interest - ISNULL((SELECT SUM(total_payment) FROM payments WHERE loan_id = l.loan_id), 0)) > ${parseFloat(search)}
-                              ORDER BY ABS((l.amount + lc.calculated_interest - ISNULL((SELECT SUM(total_payment) FROM payments WHERE loan_id = l.loan_id), 0)) - ${parseFloat(search)})`;
+                    query += ` AND (ISNULL(l.remaining_principal, l.amount) + ISNULL(l.remaining_interest, 0)) > ${parseFloat(search)}`;
                     break;
                 case 'balance<':
-                    query += ` AND (l.amount + lc.calculated_interest - ISNULL((SELECT SUM(total_payment) FROM payments WHERE loan_id = l.loan_id), 0)) < ${parseFloat(search)}
-                              ORDER BY ABS((l.amount + lc.calculated_interest - ISNULL((SELECT SUM(total_payment) FROM payments WHERE loan_id = l.loan_id), 0)) - ${parseFloat(search)})`;
+                    query += ` AND (ISNULL(l.remaining_principal, l.amount) + ISNULL(l.remaining_interest, 0)) < ${parseFloat(search)}`;
                     break;
                 case 'amount>':
-                    query += ` AND l.amount > ${parseFloat(search)} ORDER BY ABS(l.amount - ${parseFloat(search)})`;
+                    query += ` AND l.amount > ${parseFloat(search)}`;
                     break;
                 case 'amount<':
-                    query += ` AND l.amount < ${parseFloat(search)} ORDER BY ABS(l.amount - ${parseFloat(search)})`;
+                    query += ` AND l.amount < ${parseFloat(search)}`;
                     break;
                 case 'status':
-                    query += ` AND ls.new_status LIKE '%${search.replace(/'/g, "''")}%'`;
+                    query += ` AND l.status LIKE '%${search.replace(/'/g, "''")}%'`;
                     break;
             }
         }
@@ -923,82 +813,31 @@ app.get('/api/loans/:userId', async (req, res) => {
             .input('userId', sql.Int, userId)
             .query(query);
 
-        // Update loan statuses in the database
-        const updateStatusQuery = `
-            WITH LoanCalculations AS (
-                SELECT 
-                    l.loan_id,
-                    l.amount,
-                    l.interest_rate,
-                    l.next_due_date,
-                    l.status,
-                    (
-                        SELECT ISNULL(SUM(total_payment), 0)
-                        FROM payments
-                        WHERE loan_id = l.loan_id
-                    ) as total_paid
-                FROM loans l
-                WHERE l.user_id = @userId
-            ),
-            LoanStatus AS (
-                SELECT 
-                    l.loan_id,
-                    l.status,
-                    l.next_due_date,
-                    l.amount,
-                    lc.total_paid,
-                    CASE
-                        WHEN l.status = 'Cancelled' THEN 'Cancelled'
-                        WHEN l.amount <= lc.total_paid THEN 'Paid'
-                        WHEN l.next_due_date < GETDATE() THEN 'Overdue'
-                        ELSE 'Ongoing'
-                    END as new_status
-                FROM loans l
-                INNER JOIN LoanCalculations lc ON l.loan_id = lc.loan_id
-                WHERE l.user_id = @userId
-            )
-            UPDATE l
-            SET l.status = ls.new_status
-            FROM loans l
-            INNER JOIN LoanStatus ls ON l.loan_id = ls.loan_id
-            WHERE l.user_id = @userId
-            AND l.status != ls.new_status
-        `;
-        
-        await pool.request()
-            .input('userId', sql.Int, userId)
-            .query(updateStatusQuery);
-
         const data = result.recordset.map(row => {
             // Calculate balance
-            const balance = row.amount + row.calculated_interest - (row.total_payments || 0);
-
-            // Parse payment details
-            const payments = row.payment_details ? row.payment_details.split(';').map(payment => {
-                const [paymentId, paymentDate, principal, interest, total] = payment.split('|');
-                return {
-                    paymentId,
-                    paymentDate,
-                    principal: parseFloat(principal),
-                    interest: parseFloat(interest),
-                    totalPayment: parseFloat(total)
-                };
-            }) : [];
+            const remainingPrincipal = parseFloat(row.remaining_principal) || 0;
+            const remainingInterest = parseFloat(row.remaining_interest) || 0;
+            const balance = remainingPrincipal + remainingInterest;
 
             return {
-                loanId: row.loanId,
-                borrowerId: row.borrowerId,
+                loanId: row.loan_id,
+                borrowerId: row.borrower_id,
                 borrower: row.borrower,
-                amount: row.amount,
-                dateBorrowed: row.dateBorrowed,
-                interest: row.interest,
+                amount: parseFloat(row.amount),
+                interest: parseFloat(row.interest),
                 status: row.status,
                 balance: balance.toFixed(2),
                 term: row.term,
-                paymentFrequency: row.paymentFrequency,
+                paymentFrequency: row.payment_frequency,
                 nextDueDate: row.nextDueDate,
-                payments: payments,
-                agreementPhoto: row.agreementPhoto
+                dateBorrowed: row.date_borrowed || null,
+                remaining_principal: remainingPrincipal,
+                remaining_interest: remainingInterest,
+                total_balance: balance.toFixed(2),
+                agreementPhoto: row.agreement_photo,
+                phone: row.phone,
+                email: row.email,
+                address: row.address
             };
         });
 
@@ -1051,20 +890,30 @@ function calculateNextDueDate(startDate, frequency) {
         return targetDate;
     }
 
+    // Create a new date object to avoid modifying the original
+    const newDate = new Date(date);
+
     switch(frequency) {
+        case 'Weekly':
+            newDate.setDate(newDate.getDate() + 7);
+            break;
         case 'Fortnightly':
-            date.setDate(date.getDate() + 14);
+            newDate.setDate(newDate.getDate() + 14);
             break;
         case 'Monthly':
-            return addMonths(date, 1);
+            return addMonths(newDate, 1);
         case 'Quarterly':
-            return addMonths(date, 3);
+            return addMonths(newDate, 3);
         case 'Semi-annually':
-            return addMonths(date, 6);
+            return addMonths(newDate, 6);
         case 'Annually':
-            return addMonths(date, 12);
+            return addMonths(newDate, 12);
+        default:
+            console.error('Invalid payment frequency:', frequency);
+            return newDate;
     }
-    return date;
+
+    return newDate;
 }
 
 // Function to update borrower status based on loan balance
@@ -1152,6 +1001,19 @@ app.post('/addLoan', upload.single('loanAgreement'), async (req, res) => {
         const nextDueDate = calculateNextDueDate(startDate || new Date(), paymentFrequency);
         const agreementPhoto = req.file ? req.file.filename : null;
 
+        // Calculate initial interest based on payment frequency
+        const initialInterest = (() => {
+            switch(paymentFrequency) {
+                case 'Weekly': return (amount * interest/100) / 4;
+                case 'Fortnightly': return (amount * interest/100) / 2;
+                case 'Monthly': return amount * interest/100;
+                case 'Quarterly': return (amount * interest/100) * 3;
+                case 'Semi-annually': return (amount * interest/100) * 6;
+                case 'Annually': return (amount * interest/100) * 12;
+                default: return amount * interest/100;
+            }
+        })();
+
         // Insert new loan
         await pool.request()
             .input('loanId', loanId)
@@ -1160,19 +1022,21 @@ app.post('/addLoan', upload.single('loanAgreement'), async (req, res) => {
             .input('amount', amount)
             .input('interestRate', interest)
             .input('termMonths', term)
-            .input('dateBorrowed', startDate || new Date())  // Ensure we have a date
+            .input('dateBorrowed', startDate || new Date())
             .input('paymentFrequency', paymentFrequency)
             .input('nextDueDate', nextDueDate)
             .input('agreementPhoto', agreementPhoto)
+            .input('remainingPrincipal', amount)
+            .input('remainingInterest', initialInterest)
             .query(`
                 INSERT INTO loans (
                     loan_id, borrower_id, user_id, amount, interest_rate,
                     term_months, date_borrowed, payment_frequency, next_due_date,
-                    status, agreement_photo
+                    status, agreement_photo, remaining_principal, remaining_interest
                 ) VALUES (
                     @loanId, @borrowerId, @userId, @amount, @interestRate,
                     @termMonths, ISNULL(@dateBorrowed, GETDATE()), @paymentFrequency, @nextDueDate,
-                    'Ongoing', @agreementPhoto
+                    'Ongoing', @agreementPhoto, @remainingPrincipal, @remainingInterest
                 )
             `);
 
@@ -1286,7 +1150,7 @@ app.post('/addPayment', upload.single('receipt'), async (req, res) => {
         const {
             borrowerId,
             loanId,
-            paymentDate,
+            paymentDate = formatDateForSQL(req.body.paymentDate), // Ensure date is formatted correctly
             paymentMethod,
             principalPaid,
             interestPaid,
@@ -1301,149 +1165,211 @@ app.post('/addPayment', upload.single('receipt'), async (req, res) => {
             throw new Error('Missing required fields');
         }
 
-        // Get loan details and calculate current period interest
+        // Get current loan details
         const loanResult = await pool.request()
             .input('loanId', loanId)
             .query(`
-                WITH LoanCalculations AS (
-                    SELECT 
-                        l.loan_id,
-                        l.amount,
-                        l.interest_rate,
-                        l.payment_frequency,
-                        l.next_due_date,
-                        CASE 
-                            WHEN l.next_due_date < GETDATE() THEN
-                                -- Base interest (adjusted for frequency) plus overdue fees
-                                CASE l.payment_frequency
-                                    WHEN 'Weekly' THEN (l.amount * l.interest_rate/100) / 4
-                                    WHEN 'Fortnightly' THEN (l.amount * l.interest_rate/100) / 2
-                                    WHEN 'Monthly' THEN (l.amount * l.interest_rate/100)
-                                    WHEN 'Quarterly' THEN (l.amount * l.interest_rate/100) * 3
-                                    WHEN 'Semi-annually' THEN (l.amount * l.interest_rate/100) * 6
-                                    WHEN 'Annually' THEN (l.amount * l.interest_rate/100) * 12
-                                END +
-                                -- Plus overdue fees
-                                CASE l.payment_frequency
-                                    WHEN 'Weekly' THEN (l.amount * l.interest_rate/100) / 7 * DATEDIFF(day, l.next_due_date, GETDATE())
-                                    WHEN 'Fortnightly' THEN (l.amount * l.interest_rate/100) / 15 * DATEDIFF(day, l.next_due_date, GETDATE())
-                                    WHEN 'Monthly' THEN (l.amount * l.interest_rate/100) / 30 * DATEDIFF(day, l.next_due_date, GETDATE())
-                                    WHEN 'Quarterly' THEN (l.amount * l.interest_rate/100) / 90 * DATEDIFF(day, l.next_due_date, GETDATE())
-                                    WHEN 'Semi-annually' THEN (l.amount * l.interest_rate/100) / 180 * DATEDIFF(day, l.next_due_date, GETDATE())
-                                    WHEN 'Annually' THEN (l.amount * l.interest_rate/100) / 365 * DATEDIFF(day, l.next_due_date, GETDATE())
-                                END
-                            ELSE
-                                -- Just the regular period interest if not overdue
-                                CASE l.payment_frequency
-                                    WHEN 'Weekly' THEN (l.amount * l.interest_rate/100) / 4
-                                    WHEN 'Fortnightly' THEN (l.amount * l.interest_rate/100) / 2
-                                    WHEN 'Monthly' THEN (l.amount * l.interest_rate/100)
-                                    WHEN 'Quarterly' THEN (l.amount * l.interest_rate/100) * 3
-                                    WHEN 'Semi-annually' THEN (l.amount * l.interest_rate/100) * 6
-                                    WHEN 'Annually' THEN (l.amount * l.interest_rate/100) * 12
-                                END
-                        END as calculated_interest
-                    FROM loans l
-                    WHERE l.loan_id = @loanId
-                )
                 SELECT 
                     l.*,
-                    lc.calculated_interest,
-                    (
-                        SELECT ISNULL(SUM(interest_paid), 0)
-                        FROM payments p
-                        WHERE p.loan_id = l.loan_id
-                        AND p.payment_date >=
-                            CASE l.payment_frequency
-                                WHEN 'Fortnightly' THEN DATEADD(DAY, -1, l.next_due_date)
-                                WHEN 'Monthly' THEN DATEADD(MONTH, -1, l.next_due_date)
-                                WHEN 'Quarterly' THEN DATEADD(MONTH, -1, l.next_due_date)
-                                WHEN 'Semi-annually' THEN DATEADD(MONTH, -1, l.next_due_date)
-                                WHEN 'Annually' THEN DATEADD(YEAR, -1, l.next_due_date)
-                            END
-                        AND p.payment_date < l.next_due_date
-                    ) as interest_paid_this_period
+                    l.interest_rate,
+                    l.payment_frequency,
+                    l.next_due_date,
+                    l.remaining_principal,
+                    l.remaining_interest
                 FROM loans l
-                INNER JOIN LoanCalculations lc ON l.loan_id = lc.loan_id
                 WHERE l.loan_id = @loanId
             `);
 
-        const loan = loanResult.recordset[0];
-        if (!loan) {
-            throw new Error('Loan not found');
+        if (loanResult.recordset.length === 0) {
+            return res.status(404).json({ error: 'Loan not found' });
         }
 
-        // Prepare receipt path
-        const receiptPath = req.file ? req.file.filename : 'None';
+        const loan = loanResult.recordset[0];
+        const paymentDateStr = paymentDate;
+        const amount = parseFloat(totalPayment);
+        const isOverdue = paymentDate > new Date(loan.next_due_date);
 
-        // Insert payment
+        // Calculate interest and principal portions
+        let interestPortion = 0;
+        let principalPortion = 0;
+        let remainingInterest = parseFloat(loan.remaining_interest) || 0;
+        let remainingPrincipal = parseFloat(loan.remaining_principal) || loan.amount;
+
+        // Calculate overdue fee if applicable
+        let overdueFee = 0;
+        if (isOverdue) {
+            const daysOverdue = Math.ceil((paymentDate - new Date(loan.next_due_date)) / (1000 * 60 * 60 * 24));
+            const periodDays = loan.payment_frequency === 'Weekly' ? 7 :
+                loan.payment_frequency === 'Fortnightly' ? 14 :
+                loan.payment_frequency === 'Monthly' ? 30 :
+                loan.payment_frequency === 'Quarterly' ? 90 :
+                loan.payment_frequency === 'Semi-annually' ? 180 : 365;
+            overdueFee = (remainingPrincipal * loan.interest_rate/100) / periodDays * daysOverdue;
+            remainingInterest += overdueFee;
+        }
+
+        // Apply payment to interest first, then principal
+        if (amount <= remainingInterest) {
+            // Payment is less than or equal to remaining interest
+            interestPortion = amount;
+            remainingInterest -= amount;
+        } else {
+            // Payment exceeds remaining interest
+            interestPortion = remainingInterest;
+            principalPortion = amount - remainingInterest;
+            remainingInterest = 0;
+            remainingPrincipal -= principalPortion;
+        }
+
+        // Update loan balances
         await pool.request()
-            .input('borrowerId', borrowerId)
             .input('loanId', loanId)
-            .input('userId', userId)
-            .input('paymentDate', paymentDate)
-            .input('paymentMethod', paymentMethod)
-            .input('principalPaid', principalPaid)
-            .input('interestPaid', interestPaid)
-            .input('delay', delay)
-            .input('lateFee', lateFee)
-            .input('totalPayment', totalPayment)
-            .input('receipt', receiptPath)
-            .input('notes', notes || '')
+            .input('remainingPrincipal', remainingPrincipal)
+            .input('remainingInterest', remainingInterest)
             .query(`
-                INSERT INTO payments (
-                    borrower_id, loan_id, user_id, payment_date, payment_method,
-                    principal_paid, interest_paid, delay_days, late_payment_fee, total_payment,
-                    receipt, notes
-                ) VALUES (
-                    @borrowerId, @loanId, @userId, @paymentDate, @paymentMethod,
-                    @principalPaid, @interestPaid, @delay, @lateFee, @totalPayment,
-                    @receipt, @notes
-                )
+                UPDATE loans 
+                SET remaining_principal = @remainingPrincipal,
+                    remaining_interest = @remainingInterest
+                WHERE loan_id = @loanId
             `);
 
-        // Check if total interest paid for this period matches or exceeds current period interest
-        const currentPeriodInterest = parseFloat(loan.calculated_interest);
-        const interestPaidThisPeriod = parseFloat(loan.interest_paid_this_period) + parseFloat(interestPaid);
+        // Insert payment record
+        // Parse paymentDate to a Date object
+        // Parse paymentDate ("YYYY-MM-DD") as local date, not UTC
+let paymentDateObj;
+if (typeof paymentDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(paymentDate)) {
+    // Split and construct as local date
+    const [year, month, day] = paymentDate.split('-').map(Number);
+    paymentDateObj = new Date(year, month - 1, day, 0, 0, 0, 0);
+} else {
+    paymentDateObj = new Date(paymentDate);
+}
+console.log('paymentDate from client:', paymentDate, 'Parsed:', paymentDateObj);
 
-        if (interestPaidThisPeriod >= currentPeriodInterest) {
-            // Calculate new next due date
-            const newNextDueDate = calculateNextDueDate(loan.next_due_date, loan.payment_frequency);
-            
-            // Update loan with new next due date
-            await pool.request()
-                .input('loanId', loanId)
-                .input('nextDueDate', newNextDueDate)
-                .query(`
-                    UPDATE loans 
-                    SET next_due_date = @nextDueDate
-                    WHERE loan_id = @loanId
-                `);
-        }
+if (isNaN(paymentDateObj.getTime())) {
+    throw new Error('Invalid payment date: ' + paymentDate);
+}
 
-        // Check if loan is fully paid
-        const totalPaidResult = await pool.request()
+// Ensure paymentDate is in YYYY-MM-DD format for SQL DATE column
+let paymentDateSQL;
+if (typeof paymentDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(paymentDate)) {
+    paymentDateSQL = paymentDate;
+} else {
+    // Try to parse and format
+    const d = new Date(paymentDate);
+    if (isNaN(d.getTime())) {
+        throw new Error('Invalid payment date: ' + paymentDate);
+    }
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    paymentDateSQL = `${yyyy}-${mm}-${dd}`;
+}
+console.log('paymentDate from client:', paymentDate, 'SQL:', paymentDateSQL);
+
+        await pool.request()
             .input('loanId', loanId)
-            .query('SELECT SUM(total_payment) as totalPaid FROM payments WHERE loan_id = @loanId');
-        const totalPaid = totalPaidResult.recordset[0].totalPaid || 0;
-        const totalDue = loan.amount + (loan.amount * loan.interest_rate / 100);
-        
-        if (totalPaid >= totalDue) {
+            .input('borrowerId', borrowerId)
+            .input('userId', userId)
+            .input('amount', amount)
+            .input('paymentDate', sql.Date, paymentDateSQL) // <-- use sql.Date and formatted string
+            .input('interestPortion', interestPortion)
+            .input('principalPortion', principalPortion)
+            .input('overdueFee', overdueFee)
+            .input('paymentMethod', paymentMethod)
+            .input('notes', notes)
+            .input('totalPayment', amount)
+            .query(`
+                INSERT INTO payments (
+                    loan_id, borrower_id, user_id, payment_date,
+                    interest_paid, principal_paid, late_payment_fee,
+                    payment_method, notes, total_payment
+                ) VALUES (
+                    @loanId, @borrowerId, @userId, @paymentDate,
+                    @interestPortion, @principalPortion, @overdueFee,
+                    @paymentMethod, @notes, @totalPayment
+                )
+            `);
+            
+              // Calculate current period interest
+            const currentPeriodInterest = (loan.remaining_principal * loan.interest_rate / 100) 
+
+              // Get interest paid in current period (including this payment)
+            const periodStart = calculatePreviousDueDate(loan.next_due_date, loan.payment_frequency);
+            const interestResult = await pool.request()
+            .input('loanId', loanId)
+            .input('startDate', periodStart)
+            .input('endDate', loan.next_due_date)
+            .query(`
+                SELECT COALESCE(SUM(interest_paid), 0) AS existingInterest
+                FROM payments 
+                WHERE loan_id = @loanId
+                AND payment_date >= @startDate
+                AND payment_date < @endDate
+            `);
+
+            const totalInterestPaid = interestResult.recordset[0].existingInterest + parseFloat(interestPortion);
+
+            // Update next due date if enough interest paid
+            if (totalInterestPaid >= currentPeriodInterest) {
+                const newDueDate = calculateNextDueDate(loan.next_due_date, loan.payment_frequency);
+
+                await pool.request()
+                    .input('loanId', loanId)
+                    .input('newDueDate', newDueDate)
+                    .query(`
+                        UPDATE loans
+                        SET next_due_date = @newDueDate
+                        WHERE loan_id = @loanId
+                    `);
+            }
+
+
+        // Update loan status if fully paid
+        if (remainingPrincipal <= 0) {
             await pool.request()
                 .input('loanId', loanId)
-                .query(`UPDATE loans SET status = 'Paid' WHERE loan_id = @loanId`);
+                .query('UPDATE loans SET status = \'Paid\' WHERE loan_id = @loanId');
         }
 
-        // Update borrower status
-        await updateBorrowerStatus(borrowerId, pool);
-        await transaction.commit();
-        res.json({ success: true, message: 'Payment recorded successfully!' });
+        res.json({ 
+            message: 'Payment added successfully',
+            interestPortion,
+            principalPortion,
+            overdueFee,
+            remainingBalance: remainingPrincipal + remainingInterest + overdueFee
+        });
     } catch (err) {
         await transaction.rollback();
         console.error('Error recording payment:', err);
         res.status(500).json({ success: false, message: err.message || 'Error recording payment' });
     }
 });
+
+function calculatePreviousDueDate(currentDueDate, frequency) {
+    const date = new Date(currentDueDate);
+    switch(frequency) {
+        case 'Weekly': date.setDate(date.getDate() - 7); break;
+        case 'Fortnightly': date.setDate(date.getDate() - 14); break;
+        case 'Monthly': date.setMonth(date.getMonth() - 1); break;
+        case 'Quarterly': date.setMonth(date.getMonth() - 3); break;
+        case 'Semi-annually': date.setMonth(date.getMonth() - 6); break;
+        case 'Annually': date.setFullYear(date.getFullYear() - 1); break;
+    }
+    return date;
+}
+
+function formatDateForSQL(date) {
+  const d = new Date(date);
+  const year = d.getUTCFullYear();
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`; // Returns "2025-05-24"
+}
+
+
+
+
 
 // API endpoint for fetching borrowers for record payment
 app.get('/api/borrowers-for-payment/:userId', async (req, res) => {
@@ -1519,14 +1445,31 @@ app.get('/api/loans-for-payment/:userId/:borrowerId', async (req, res) => {
                             WHERE p.loan_id = l.loan_id
                             AND p.payment_date >=
                                 CASE l.payment_frequency
-                                    WHEN 'Fortnightly' THEN DATEADD(DAY, -1, l.next_due_date)
+                                    WHEN 'Weekly' THEN DATEADD(WEEK, -1, l.next_due_date)
+                                    WHEN 'Fortnightly' THEN DATEADD(DAY, -14, l.next_due_date)
                                     WHEN 'Monthly' THEN DATEADD(MONTH, -1, l.next_due_date)
-                                    WHEN 'Quarterly' THEN DATEADD(MONTH, -1, l.next_due_date)
-                                    WHEN 'Semi-annually' THEN DATEADD(MONTH, -1, l.next_due_date)
+                                    WHEN 'Quarterly' THEN DATEADD(MONTH, -3, l.next_due_date)
+                                    WHEN 'Semi-annually' THEN DATEADD(MONTH, -6, l.next_due_date)
                                     WHEN 'Annually' THEN DATEADD(YEAR, -1, l.next_due_date)
                                 END
                             AND p.payment_date < l.next_due_date
-                        ) as interest_paid_this_period
+                        ) as interest_paid_this_period,
+                        -- Calculate days into current period
+                        CASE 
+                            WHEN l.next_due_date > GETDATE() THEN
+                                DATEDIFF(DAY,
+                                    CASE l.payment_frequency
+                                        WHEN 'Weekly' THEN DATEADD(WEEK, -1, l.next_due_date)
+                                        WHEN 'Fortnightly' THEN DATEADD(DAY, -14, l.next_due_date)
+                                        WHEN 'Monthly' THEN DATEADD(MONTH, -1, l.next_due_date)
+                                        WHEN 'Quarterly' THEN DATEADD(MONTH, -3, l.next_due_date)
+                                        WHEN 'Semi-annually' THEN DATEADD(MONTH, -6, l.next_due_date)
+                                        WHEN 'Annually' THEN DATEADD(YEAR, -1, l.next_due_date)
+                                    END,
+                                    GETDATE()
+                                )
+                            ELSE 0
+                        END as days_into_period
                     FROM loans l
                 )
                 SELECT 
@@ -1539,7 +1482,20 @@ app.get('/api/loans-for-payment/:userId/:borrowerId', async (req, res) => {
                     lc.current_period_interest,
                     lc.total_paid,
                     lc.interest_paid_this_period,
-                    (lc.current_period_interest - lc.interest_paid_this_period) as remaining_interest
+                    CASE 
+                        WHEN l.next_due_date > GETDATE() THEN
+                            (lc.current_period_interest * lc.days_into_period / 
+                                CASE l.payment_frequency
+                                    WHEN 'Weekly' THEN 7
+                                    WHEN 'Fortnightly' THEN 14
+                                    WHEN 'Monthly' THEN 30
+                                    WHEN 'Quarterly' THEN 90
+                                    WHEN 'Semi-annually' THEN 180
+                                    WHEN 'Annually' THEN 365
+                                END) - lc.interest_paid_this_period
+                        ELSE lc.current_period_interest - lc.interest_paid_this_period
+                    END as remaining_interest,
+                    ISNULL(l.remaining_principal, l.amount) as remaining_principal
                 FROM loans l
                 INNER JOIN LoanCalculations lc ON l.loan_id = lc.loan_id
                 WHERE l.user_id = @userId 
@@ -1558,7 +1514,7 @@ app.get('/api/loans-for-payment/:userId/:borrowerId', async (req, res) => {
 // Cancel Loan endpoint
 app.post('/cancel-loan', async (req, res) => {
     const { loanId, password } = req.body;
-    const userId = req.session.user.user_id;
+    const userId = req.session.user_id;
     try {
         const pool = await connectToDB();
         // 1. Verify password
