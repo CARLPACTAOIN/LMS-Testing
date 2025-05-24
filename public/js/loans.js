@@ -70,11 +70,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Close modal when clicking outside
     window.addEventListener('click', (event) => {
-        if (event.target === logoutModal) {
+        const modalFlex = document.getElementById('modal-flex');
+        if (event.target === logoutModal || event.target === modalFlex) {
             logoutModal.style.display = 'none';
         }
     });
 
+    // Get DOM elements
     const tbody = document.getElementById('loan-tbody');
     const modal = document.getElementById('loanModal');
     const modalContent = document.getElementById('modalContent1');
@@ -84,6 +86,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const searchInput = document.getElementById('search-input');
     const viewWrapper = document.querySelector('.viewWrapper');
     let timeoutId;
+
+    // Add event listeners for closing modal
+    closeModal.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+
+    window.addEventListener('click', (event) => {
+        const modalFlex = document.getElementById('modal-flex');
+        if (event.target === modal || event.target === modalFlex) {
+            modal.style.display = 'none';
+        }
+    });
 
     if (!userId) {
         console.error("No user ID found.");
@@ -108,40 +122,57 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const loan = allLoans.find(l => l.loanId === viewLoanId);
                 if (loan) {
                     setTimeout(() => {
-                        showLoanModal(loan);
+                        showLoanModal(loan.loanId);
                     }, 100);
                 }
             }
         } catch (err) {
             console.error('Error loading loans:', err);
-            tbody.innerHTML = `<tr><td colspan="8">Failed to load loan data.</td></tr>`;
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="8">Failed to load loan data.</td></tr>`;
+            }
         }
     }
 
     // Function to render filtered loans
     function renderLoans(loans) {
+        if (!tbody) {
+            console.error('Table body element not found');
+            return;
+        }
+
         tbody.innerHTML = '';
-        
+       
         loans.forEach(loan => {
-            const tr = document.createElement('tr');
+
             const isPayDisabled = loan.status === 'Paid' || loan.status === 'Cancelled';
-            // Ensure balance is not negative
-            const displayBalance = Math.max(0, parseFloat(loan.balance));
+            const tr = document.createElement('tr');
+            const remainingPrincipal = parseFloat(loan.remaining_principal || 0);
+            const remainingInterest = parseFloat(loan.remaining_interest || 0);
+            const lateFee = loan.status === 'Overdue' ? 
+                (remainingPrincipal * (loan.interest/100) / 
+                    (loan.paymentFrequency === 'Weekly' ? 7 : 
+                    loan.paymentFrequency === 'Fortnightly' ? 14 :
+                    loan.paymentFrequency === 'Monthly' ? 30 :
+                    loan.paymentFrequency === 'Quarterly' ? 90 :
+                    loan.paymentFrequency === 'Semi-annually' ? 180 : 365) * Math.max(0, Math.floor((new Date() - new Date(loan.nextDueDate)) / (1000 * 60 * 60 * 24)))) : 0;
+            const displayBalance = remainingPrincipal + remainingInterest + lateFee;
+            const dateBorrowed = loan.dateBorrowed ? new Date(loan.dateBorrowed).toLocaleDateString('en-US', {
+                month: 'short',
+                day: '2-digit',
+                year: 'numeric'
+            }) : 'N/A';
+            
             tr.innerHTML = `
                 <td>${loan.loanId}</td>
-                <td><span style="font-weight: 500;">${loan.borrower}</span></td>
-                <td>${loan.amount}</td>
-                <td>${loan.dateBorrowed}</td>
-                <td>${loan.interest}</td>
-                <td class="${
-                    loan.status === 'Ongoing' ? 'ongoing' :
-                    loan.status === 'Paid' ? 'paid' :
-                    loan.status === 'Overdue' ? 'overdue' :
-                    loan.status === 'Cancelled' ? 'cancelled' : ''
-                }">${loan.status}</td>
+                <td>${loan.borrower}</td>
+                <td>${loan.amount.toFixed(2)}</td>
+                <td>${dateBorrowed}</td>
+                <td>${loan.interest}%</td>
+                <td class="${loan.status.toLowerCase()}">${loan.status}</td>
                 <td>${displayBalance.toFixed(2)}</td>
                 <td id="act-btn">
-                    <button class="action-btn" id="detailsBtn" data-id="${loan.loanId}">
+                    <button class="action-btn" onclick="showLoanModal('${loan.loanId}')">
                         View
                     </button>
                     <button class="pay-btn-table" id="payBtn" data-id="${loan.loanId}" data-status="${loan.status}">
@@ -161,65 +192,83 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
                 }
             }
-        });
 
-        // Add click handlers to all action buttons
-        document.querySelectorAll('.action-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const loanId = btn.getAttribute('data-id');
-                const loan = allLoans.find(l => l.loanId === loanId);
-                showLoanModal(loan);
-            });
         });
     }
 
-    let ignoreNextModalClick = false;
+    // Make showLoanModal available globally
+    window.showLoanModal = function(loanId) {
+        const loan = allLoans.find(l => l.loanId === loanId);
+        if (!loan) return;
 
-    function showLoanModal(loan) {
-        document.getElementById("modalLoanId").innerText = `Loan ID: ${loan.loanId}`;
+        const modalContent1 = document.getElementById('modalContent1');
+        const modalContent2 = document.getElementById('modalContent2');
+        if (!modalContent1 || !modalContent2) {
+            console.error('Modal content elements not found');
+            return;
+        }
+        console.log(loan.remaining_interest);
 
-        ignoreNextModalClick = true;
-        console.log('Loan object:', loan); // Debug log
-        console.log('BorrowerId:', loan.borrowerId); // Debug log
+        // Update modal header with loan ID
+        document.getElementById('modalLoanId').textContent = `Loan ID: ${loan.loanId}`;
+
+       
         
-        // Ensure balance is not negative
-        const displayBalance = Math.max(0, parseFloat(loan.balance));
+        const remainingPrincipal = parseFloat(loan.remaining_principal || 0);
+            const remainingInterest = parseFloat(loan.remaining_interest || 0);
+            const lateFee = loan.status === 'Overdue' ? 
+                (remainingPrincipal * (loan.interest/100) / 
+                    (loan.paymentFrequency === 'Weekly' ? 7 : 
+                    loan.paymentFrequency === 'Fortnightly' ? 14 :
+                    loan.paymentFrequency === 'Monthly' ? 30 :
+                    loan.paymentFrequency === 'Quarterly' ? 90 :
+                    loan.paymentFrequency === 'Semi-annually' ? 180 : 365) * Math.max(0, Math.floor((new Date() - new Date(loan.nextDueDate)) / (1000 * 60 * 60 * 24)))) : 0;
+        const displayBalance = parseFloat(loan.remaining_principal || 0) + parseFloat((loan.remaining_interest + lateFee) || 0);
         
-        modalContent.innerHTML = `
-            <tr><td>Borrower</td><td>: <span id="borrowerView">${loan.borrower}</span></td></tr>
-            <tr><td>Amount</td><td>: <span id="amountView">${loan.amount}</span></td></tr>
-            <tr><td>Date Borrowed</td><td>: <span id="dateBorrowedView">${loan.dateBorrowed}</span></td></tr>
-            <tr><td>Term</td><td>: <span id="termView">${loan.term} months</span></td></tr>
-            <tr><td>Interest Rate</td><td>: <span id="interestView">${loan.interest}</span></td></tr>
+        modalContent1.innerHTML = `
+            <tr><td>Name</td><td>: ${loan.borrower}</td></tr>
+            <tr><td>Amount</td><td>: ${loan.amount.toFixed(2)}</td></tr>
+            <tr><td>Date Borrowed</td><td>: ${loan.dateBorrowed}</td></tr>
+            <tr><td>Term</td><td>: ${loan.term} months</td></tr>
+            <tr><td>Interest Rate</td><td>: ${loan.interest}%</td></tr>
+            <tr><td>Payment Frequency</td><td>: ${loan.paymentFrequency}</td></tr>
+           
         `;
-        
+
         modalContent2.innerHTML = `
-            <tr><td>Balance</td><td>: <span id="balanceView">${displayBalance.toFixed(2)}</span></td></tr>
-            <tr><td>Payment Frequency</td><td>: <span id="paymentFrequencyView">${loan.paymentFrequency}</span></td></tr>
-            <tr><td>Next Due Date</td><td>: <span id="nextDueDateView">${loan.nextDueDate}</span></td></tr>
-            <tr><td>Agreement Document</td><td>: 
-            ${loan.agreementPhoto ? 
-                `<button class="viewAgreementButton" data-photo="/uploads/${loan.agreementPhoto}">View Document</button>`
-                : 
-                'No Agreement uploaded'
-            }
-            </td></tr>
+            <tr><td>Next Due Date</td><td>: ${loan.nextDueDate}</td></tr>
+            <tr><td>Status</td><td>: ${loan.status}</td></tr>
+            <tr><td>Remaining Principal</td><td>: ${parseFloat(loan.remaining_principal || 0).toFixed(2)}</td></tr>
+            <tr><td>Current Interest</td><td>: ${parseFloat((loan.remaining_interest + lateFee) || 0).toFixed(2)}</td></tr>
+            <tr><td>Total Balance</td><td>: ${displayBalance.toFixed(2)}</td></tr>
+            ${loan.agreementPhoto ? `
+                <tr><td>Agreement Document</td><td>: 
+                    <button class="viewAgreementButton" data-photo="/uploads/${loan.agreementPhoto}">View Agreement</button>
+                </td></tr>
+            ` : ''}
         `;
 
-        // Add click handler for agreement photo if exists
+        // Add click handler for agreement photo if it exists
         if (loan.agreementPhoto) {
             const viewBtn = modalContent2.querySelector('.viewAgreementButton');
+            const agreementModal = document.getElementById('agreementPhotoModal');
+            const closePhotoBtn = agreementModal.querySelector('.close-photo');
+            
             viewBtn.addEventListener('click', () => {
                 document.getElementById('agreementPhotoDisplay').src = viewBtn.dataset.photo;
-                document.getElementById('agreementPhotoModal').style.display = 'block';
+                agreementModal.style.display = 'block';
             });
-        }
 
-        // Always reset the cancel form handler and password field when opening the modal
+        // Create new modal actions container
+        const newModalActions = document.createElement('div');
+        newModalActions.className = 'modal-actions';
+
+            // Always reset the cancel form handler and password field when opening the modal
         const confirmForm = document.querySelector('.cancel-form');
         confirmForm.onsubmit = null;
         confirmForm.onsubmit = async (e) => {
             e.preventDefault();
+            console.log('Cancelling loanId:', loan.loanId); // Debug log
             const password = document.getElementById('removePass').value;
             try {
                 const response = await fetch('/cancel-loan', {
@@ -260,16 +309,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Clean up and recreate modal actions
         const modalHeader = document.querySelector('.modal-header');
         const modalActions = document.querySelector('.modal-actions');
-        
-        // Remove existing modal actions if any
-        if (modalActions) {
-            modalActions.remove();
-        }
-        
-        // Create new modal actions container
-        const newModalActions = document.createElement('div');
-        newModalActions.className = 'modal-actions';
-        
+
         // Create Pay Button
         const payBtn = document.createElement('button');
         payBtn.className = 'pay-btn';
@@ -286,7 +326,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const cancelBtn = document.createElement('button');
         cancelBtn.className = 'cancel-btn';
         cancelBtn.textContent = 'Cancel';
-        const isCancelDisabled = loan.status === 'Cancelled';
+        const isCancelDisabled = loan.status === 'Paid' || loan.status === 'Cancelled';
         cancelBtn.disabled = isCancelDisabled;
         if (!isCancelDisabled) {
             cancelBtn.addEventListener('click', () => {
@@ -297,47 +337,57 @@ document.addEventListener('DOMContentLoaded', async () => {
                 };
             });
         }
+
+         // Add buttons to modal actions
+         newModalActions.appendChild(payBtn);
+         newModalActions.appendChild(cancelBtn);
+         
+         // Add modal actions to header
+         modalHeader.appendChild(newModalActions);
+ 
+         modal.style.display = 'block';
+    
         
-        // Add buttons to modal actions
-        newModalActions.appendChild(payBtn);
-        newModalActions.appendChild(cancelBtn);
+        // Remove existing modal actions if any
+        if (modalActions) {
+            modalActions.remove();
+        }
         
-        // Add modal actions to header
-        modalHeader.appendChild(newModalActions);
+      
 
-        modal.style.display = 'block';
-    }
+            // Close when clicking X
+            closePhotoBtn.addEventListener('click', () => {
+                agreementModal.style.display = 'none';
+            });
 
-    // Close photo modal
-    document.querySelector('.close-photo')?.addEventListener('click', () => {
-        document.getElementById('agreementPhotoModal').style.display = 'none';
-    });
-
-    // Close when clicking outside image
-    window.addEventListener('click', (event) => {
-        const photoModal = document.getElementById('agreementPhotoModal');
-        if (event.target === photoModal) {
-            photoModal.style.display = 'none';
+            // Close when clicking outside
+            window.addEventListener('click', (event) => {
+                if (event.target === agreementModal) {
+                    agreementModal.style.display = 'none';
+                }
+            });
         }
-    });
 
-    // Close modal when clicking X
-    closeModal.addEventListener('click', () => {
-        modal.style.display = 'none';
-    });
+        document.getElementById('loanModal').style.display = 'block';
+    };
 
-    // Close modal when clicking outside
-    window.addEventListener('click', (event) => {
-        const modalBg = document.querySelector('.modal-bg');
-        const modalFlex = document.querySelector('.modal-flex');
-        if (ignoreNextModalClick) {
-            ignoreNextModalClick = false;
-            return;
-        }
-        if (event.target === modalBg || event.target === modalFlex) {
-            modal.style.display = 'none';
-        }
-    });
+    // Make showPaymentModal available globally
+    window.showPaymentModal = function(loanId) {
+        const loan = allLoans.find(l => l.loanId === loanId);
+        if (!loan) return;
+        
+        window.location.href = `/record-payment?loanId=${loanId}&borrowerId=${loan.borrowerId}&from=loans`;
+    };
+
+    // Add showCancelModal function
+    window.showCancelModal = function(loanId) {
+        document.querySelector('.cancel-bg').style.display = 'block';
+        document.getElementById('removePass').value = '';
+        document.getElementById('cancelError').classList.remove('show');
+        
+        // Store the loan ID for the cancel form submission
+        document.querySelector('.cancel-form').dataset.loanId = loanId;
+    };
 
     // Function to filter loans
     function filterLoans() {
@@ -354,9 +404,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 case 'borrower':
                     return loan.borrower.toLowerCase().includes(searchTerm);
                 case 'interestRate':
-                    return loan.interest.toLowerCase().includes(searchTerm);
+                    return loan.interest.toString().includes(searchTerm);
                 case 'dateBorrowed':
-                    return loan.dateBorrowed.toLowerCase().includes(searchTerm);
+                    return loan.dateBorrowed?.toLowerCase().includes(searchTerm);
                 case 'balance>':
                     return parseFloat(loan.balance) > parseFloat(searchTerm);
                 case 'balance<':
@@ -394,8 +444,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Event listeners
-    searchInput.addEventListener('input', debounce(filterLoans, 300));
-    filterField.addEventListener('change', filterLoans);
+    if (searchInput) searchInput.addEventListener('input', debounce(filterLoans, 300));
+    if (filterField) filterField.addEventListener('change', filterLoans);
 
     // Initial fetch
     await fetchLoans();
@@ -404,6 +454,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('cancelError').classList.remove('show');
     });
 });
-
 
 

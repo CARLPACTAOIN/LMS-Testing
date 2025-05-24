@@ -269,7 +269,7 @@ function showBorrowerModal(borrower) {
         <tr><td>Total Active Loans</td><td>: <span id="activeLoansView">${borrower.totalActiveLoans}</span></td></tr>
         <tr><td>Total Amount Borrowed</td><td>: <span id="amountBorrowedView">${borrower.totalAmountBorrowed}</span></td></tr>
         <tr><td>Total Paid</td><td>: <span id="totalPaidView">${borrower.totalPaid}</span></td></tr>
-        <tr><td>Remaining Balance</td><td>: <span id="balanceView">${Math.max(0, parseFloat(borrower.remainingPrincipal || 0) + parseFloat(borrower.remainingInterest || 0)).toFixed(2)}</span></td></tr>
+        <tr><td>Remaining Balance</td><td>: <span id="balanceView">${Math.max(0, parseFloat(borrower.remainingPrincipal || 0) + parseFloat(borrower.remainingInterest || 0) + parseFloat(borrower.lateFee || 0)).toFixed(2)}</span></td></tr>
         <tr><td>Photo ID</td><td>: 
         ${borrower.photoId ? 
             `<button class="viewIdButton" data-photo="/uploads/${borrower.photoId}">View ID</button>`

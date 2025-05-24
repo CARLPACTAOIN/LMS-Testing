@@ -162,11 +162,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 matches,
                 l => `${l.loan_id} - ${formatDate(l.next_due_date)}`,
                 (loan) => {
-                    loanInput.value = `${loan.loan_id} - ${formatDate(loan.next_due_date)}`;
+                    loanInput.value = `${loan.loan_id} - ${formatDate(l.next_due_date)}`;
                     selectedLoanId = loan.loan_id;
                     selectedLoanObj = loan;
                     // Prefill interest with remaining amount for current period
                     interestPaidInput.value = loan.remaining_interest.toFixed(2);
+                    // Ensure payment date is set before calculating delay and fee
+                    if (!paymentDateInput.value) {
+                        const today = new Date();
+                        paymentDateInput.value = today.toISOString().split('T')[0];
+                    }
                     updateDelayAndFee(loan);
                 }
             );
@@ -176,12 +181,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- Update Delay and Late Fee ---
     function updateDelayAndFee(loan) {
         if (!loan) return;
-        const today = new Date();
+        const paymentDate = new Date(paymentDateInput.value); // Use selected payment date
         const dueDate = new Date(loan.next_due_date);
-        const delay = Math.max(0, Math.floor((today - dueDate) / (1000 * 60 * 60 * 24)));
+        const delay = Math.max(0, Math.floor((paymentDate - dueDate) / (1000 * 60 * 60 * 24)));
         delayInput.value = delay;
-        // Calculate late fee (example: 1% per day)
-        const lateFee = delay > 0 ? (loan.amount * 0.01 * delay) : 0;
+
+        // Get period days based on payment frequency
+        let periodDays;
+        switch(loan.payment_frequency) {
+            case 'Weekly': periodDays = 7; break;
+            case 'Fortnightly': periodDays = 14; break;
+            case 'Monthly': periodDays = 30; break;
+            case 'Quarterly': periodDays = 90; break;
+            case 'Semi-annually': periodDays = 180; break;
+            case 'Annually': periodDays = 365; break;
+            default: periodDays = 30;
+        }
+
+        // Calculate late fee using the new formula with remaining principal
+        const lateFee = delay > 0 ? 
+            (loan.remaining_principal * (loan.interest_rate/100) / periodDays * delay) : 0;
         lateFeeInput.value = lateFee.toFixed(2);
     }
 
@@ -379,3 +398,4 @@ document.getElementById("backButton").addEventListener("click", () => {
         window.location.href = '/loans';
     }
 });
+
